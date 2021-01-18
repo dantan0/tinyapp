@@ -11,6 +11,12 @@ app.get('/', (req, res) => {
   res.send('Hello!');
 });
 
+app.get('/urls', (req, res) => {
+  res.send(urlDatabase);
+})
+
 app.listen(PORT, () => {
   console.log(`Examine app listening on port ${PORT}!`);
 });
+
+console.log('first to log!')
