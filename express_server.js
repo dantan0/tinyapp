@@ -12,9 +12,14 @@ const urlDatabase = {
 };
 
 // purpose: return a string of 6 random alphanumeric characters
-// source: https://stackoverflow.com/questions/10726909/random-alpha-numeric-string-in-javascript
+// source: https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript/27747377
 const generateRandomString = function() {
-  return Math.random().toString(36).slice(2);
+  let result = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 6; i++ ) {
+     result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
 };
 
 app.get('/', (req, res) => {
@@ -32,8 +37,10 @@ app.get('/urls/new', (req, res) => {
 });
 
 app.post('/urls', (req, res) => {
-  console.log(req.body);
-  res.send('Ok');
+  // save the url
+  const newShortURL = generateRandomString();
+  urlDatabase[newShortURL] = req.body.longURL;
+  res.redirect(`/urls/${newShortURL}`);
 });
 
 app.get('/urls/:shortURL', (req, res) => {
@@ -43,6 +50,11 @@ app.get('/urls/:shortURL', (req, res) => {
   res.render('urls_show', templateVars);
 });
 
+// new route for handling redirect
+app.get('/u/:shortURL', (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
+});
 
 app.get('/hello', (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
@@ -52,4 +64,4 @@ app.listen(PORT, () => {
   console.log(`Examine app listening on port ${PORT}!`);
 });
 
-console.log('first to log!');
+console.log('Starting...');
