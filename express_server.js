@@ -11,7 +11,7 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-// purpose: return a string of 6 random alphanumeric characters
+// purpose: return a string of 6 random alphanumeric characters!
 // source: https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript/27747377
 const generateRandomString = function() {
   let result = '';
