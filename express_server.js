@@ -47,13 +47,12 @@ const addUser = function(userInfo) {
 };
 
 // checking if email already exists
-const emailCheck = function(email) {
+const getUserByEmail = function(email) {
   for(let userID in users) {
     if (users[userID].email === email) {
-      return true;
+      return users[userID]
     }
   }
-  return false;
 };
 
 app.get('/', (req, res) => {
@@ -126,16 +125,32 @@ app.post('/urls/:id', (req, res) => {
   urlDatabase[shortURL] = updatedLongURL;
 });
 
+// show user login
+app.get('/login', (req, res) => {
+  const userID = req.cookies["user_id"];
+  const templateVars = {
+    user: users[userID]
+  }
+  res.render('user_login', templateVars);
+});
+
 // handle user login with email
 app.post('/login', (req, res) => {
   const email = req.body.email;
-  for (userID in users) {
-    if (users[userID].email === email) {
-      // console.log('found', users[userID]);
-      res.cookie('user_id', userID);
+  const password = req.body.password;
+  const user = getUserByEmail(email);
+
+  // check if user indeed exists
+  if (!user) {
+    res.status(403).send('Email cannot be found');
+  } else {
+    if (user.password !== password) {
+      res.status(403).send('Password is incorrect');
+    } else {
+      res.cookie('user_id', user.id);
+      res.redirect('/urls');
     }
   }
-  res.redirect('/urls');
 });
 
 // handle user logout
@@ -163,7 +178,7 @@ app.post('/register', (req, res) => {
     return res.status(400).send('Either email or password missing!');
   }
 
-  if (emailCheck(email)){
+  if (getUserByEmail(email)){
     return res.status(400).send('Email has already been used');
   }
 
