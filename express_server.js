@@ -123,6 +123,7 @@ app.post('/urls/:id', (req, res) => {
   const shortURL = req.params.id;
   const updatedLongURL = req.body.longURL;
   urlDatabase[shortURL] = updatedLongURL;
+  res.redirect('/urls');
 });
 
 // show user login
