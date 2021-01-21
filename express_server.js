@@ -38,15 +38,17 @@ const users = {
   }
 };
 
-app.get('/', (req, res) => {
-  res.send('Hello!');
-});
-
-app.get('/hello', (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
-
 // index page
+app.get('/', (req, res) => {
+  const userID = req.session["user_id"];
+  if (!userID) {
+    res.redirect('/login');
+  } else {
+    res.redirect('/urls');
+  }
+});
+
+// all urls
 app.get('/urls', (req, res) => {
   const userID = req.session["user_id"];
   const filteredURLs = urlsForUser(userID, urlDatabase);
@@ -61,7 +63,7 @@ app.get('/urls', (req, res) => {
 app.get('/urls/new', (req, res) => {
   const userID = req.session["user_id"];
   if (!userID) {
-    res.redirect('/urls');
+    res.redirect('/login');
   }
   const templateVars = {
     user: users[userID]
@@ -129,9 +131,9 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 });
 
 // handle update urls
-app.post('/urls/:id', (req, res) => {
+app.post('/urls/:shortURL', (req, res) => {
   const userID = req.session["user_id"];
-  const shortURL = req.params.id;
+  const shortURL = req.params.shortURL;
   if (!userID) {
     return res.status(401).send('Edit not authorized');
   }
@@ -186,10 +188,11 @@ app.post('/logout', (req, res) => {
 
 // get register page
 app.get('/register', (req, res) => {
-  const userID = req.session["user_id"];
-  const templateVars = {
-    user: users[userID]
-  };
+  // must log out first before registering
+  if (req.session["user_id"]) {
+    return res.redirect('/urls');
+  }
+  const templateVars = { user: '' }; // user doesn't exist
   res.render('user_registration', templateVars);
 });
 
