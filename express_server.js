@@ -114,8 +114,8 @@ app.get('/urls/:shortURL', (req, res) => {
   if (!userID) {
     return res.status(401).send('Please log in first');
   }
-  if (urlDatabase[shortURL].userID !== userID) {
-    return res.status(401).send('You are not authorized');
+  if (!urlDatabase[shortURL] || urlDatabase[shortURL].userID !== userID) {
+    return res.status(401).send('URL does not exist');
   };
   const templateVars = {
     shortURL, 
@@ -138,11 +138,11 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   if (!userID) {
     return res.status(401).send('Delete not authorized');
   }
-  if (urlDatabase[shortURL] && urlDatabase[shortURL].userID === userID) {
+  if (!urlDatabase[shortURL] || urlDatabase[shortURL].userID !== userID) {
+    return res.status(401).send('URL does not exist');
+  } else {
     delete urlDatabase[shortURL];
     res.redirect('/urls');
-  } else {
-    res.status(401).send('URL does not exist');
   }
 });
 
@@ -153,12 +153,15 @@ app.post('/urls/:id', (req, res) => {
   if (!userID) {
     return res.status(401).send('Edit not authorized');
   }
-  if (urlDatabase[shortURL] && urlDatabase[shortURL].userID === userID) {
-    const updatedLongURL = req.body.longURL;
-    urlDatabase[shortURL] = updatedLongURL;
-    res.redirect('/urls');
+  if (!urlDatabase[shortURL] || urlDatabase[shortURL].userID !== userID) {
+    return res.status(401).send('URL does not exist');
   } else {
-    res.status(401).send('URL does not exist');
+    const updatedLongURL = req.body.longURL;
+    urlDatabase[shortURL] = {
+      longURL: updatedLongURL,
+      userID: userID
+    };
+    res.redirect('/urls');
   }
 });
 
@@ -179,14 +182,13 @@ app.post('/login', (req, res) => {
 
   // check if user indeed exists
   if (!user) {
-    res.status(403).send('Email cannot be found');
+    return res.status(403).send('Email cannot be found');
+  }
+  if (user.password !== password) {
+    return res.status(403).send('Password is incorrect');
   } else {
-    if (user.password !== password) {
-      res.status(403).send('Password is incorrect');
-    } else {
-      res.cookie('user_id', user.id);
-      res.redirect('/urls');
-    }
+    res.cookie('user_id', user.id);
+    res.redirect('/urls');
   }
 });
 
