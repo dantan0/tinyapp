@@ -1,15 +1,18 @@
 const express = require('express');
+const morgan = require('morgan');
 const bodyParser = require('body-parser');
-// const cookieParser = require('cookie-parser');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080;
 
+// import helper functions
+const { generateRandomString, addUser, getUserByEmail, urlsForUser, checkDuplicateURLs } = require('./helpers');
+
 // set and use middleware
+app.use(morgan('dev'));
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-// app.use(cookieParser());
 app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2']
@@ -35,54 +38,6 @@ const users = {
   }
 };
 
-// purpose: return a string of 6 random alphanumeric characters!
-// source: https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript/27747377
-const generateRandomString = function() {
-  let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 6; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-};
-
-// add user to users
-const addUser = function(userInfo) {
-  const { id, email, password } = userInfo;
-  users[id] = { id, email, password };
-  console.log(users); // show all users
-};
-
-// checking if email already exists
-const getUserByEmail = function(email) {
-  for (let userID in users) {
-    if (users[userID].email === email) {
-      return users[userID];
-    }
-  }
-};
-
-// filter urls such that only creators of urls can see
-const urlsForUser = function(userID) {
-  const filteredURLs = {}; // a key value pair of short and long urls
-  for (let shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === userID) {
-      filteredURLs[shortURL] = urlDatabase[shortURL].longURL;
-    }
-  }
-  return filteredURLs;
-};
-
-// check duplicate long urls
-const checkDuplicateURLs = function(urls, check) {
-  for (let url in urls) {
-    if (urls[url] === check) {
-      return true;
-    }
-  }
-  return false;
-};
-
 app.get('/', (req, res) => {
   res.send('Hello!');
 });
@@ -94,7 +49,7 @@ app.get('/hello', (req, res) => {
 // index page
 app.get('/urls', (req, res) => {
   const userID = req.session["user_id"];
-  const filteredURLs = urlsForUser(userID);
+  const filteredURLs = urlsForUser(userID, urlDatabase);
   const templateVars = {
     urls: filteredURLs,
     user: users[userID]
@@ -119,7 +74,7 @@ app.post('/urls', (req, res) => {
   const newShortURL = generateRandomString();
   const newLongURL = req.body.longURL;
   const userID = req.session["user_id"];
-  const existingURLs = urlsForUser(userID);
+  const existingURLs = urlsForUser(userID, urlDatabase);
   if (checkDuplicateURLs(existingURLs, newLongURL)) {
     return res.send('URL already exists');
   }
@@ -183,7 +138,7 @@ app.post('/urls/:id', (req, res) => {
   if (!urlDatabase[shortURL] || urlDatabase[shortURL].userID !== userID) {
     return res.status(401).send('URL does not exist');
   } else {
-    const existingURLs = urlsForUser(userID);
+    const existingURLs = urlsForUser(userID, urlDatabase);
     const updatedLongURL = req.body.longURL;
     if (checkDuplicateURLs(existingURLs, updatedLongURL)) {
       return res.send('URL already exists');
@@ -209,7 +164,7 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, users);
 
   // check if user indeed exists
   if (!user) {
@@ -248,7 +203,7 @@ app.post('/register', (req, res) => {
     return res.status(400).send('Either email or password missing!');
   }
 
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, users)) {
     return res.status(400).send('Email has already been used');
   }
 
@@ -259,7 +214,7 @@ app.post('/register', (req, res) => {
     email, 
     password: hashedPassword, 
   };
-  addUser(userInfo);
+  addUser(userInfo, users);
 
   req.session['user_id'] = id;
   res.redirect('/urls');
