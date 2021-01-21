@@ -131,7 +131,8 @@ app.get('/u/:shortURL', (req, res) => {
   res.redirect(longURL);
 });
 
-// handle delete urls
+// handle delete urls and can use cookies in curl to test
+// source: https://stackoverflow.com/questions/15995919/how-to-use-curl-to-send-cookies/15996114#15996114
 app.post('/urls/:shortURL/delete', (req, res) => {
   const userID = req.cookies["user_id"];
   const shortURL = req.params.shortURL;
