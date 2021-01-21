@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
+// const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080;
@@ -8,7 +9,11 @@ const PORT = 8080;
 // set and use middleware
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+// app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2']
+}));
 
 // storing short and long url pairs
 const urlDatabase = {
@@ -68,6 +73,16 @@ const urlsForUser = function(userID) {
   return filteredURLs;
 };
 
+// check duplicate long urls
+const checkDuplicateURLs = function(urls, check) {
+  for (let url in urls) {
+    if (urls[url] === check) {
+      return true;
+    }
+  }
+  return false;
+};
+
 app.get('/', (req, res) => {
   res.send('Hello!');
 });
@@ -78,7 +93,7 @@ app.get('/hello', (req, res) => {
 
 // index page
 app.get('/urls', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   const filteredURLs = urlsForUser(userID);
   const templateVars = {
     urls: filteredURLs,
@@ -89,7 +104,7 @@ app.get('/urls', (req, res) => {
 
 // new needs to be defined before the specific url id
 app.get('/urls/new', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   if (!userID) {
     res.redirect('/urls');
   }
@@ -102,16 +117,22 @@ app.get('/urls/new', (req, res) => {
 // route for creating a new url, which only happens if a user is logged in
 app.post('/urls', (req, res) => {
   const newShortURL = generateRandomString();
+  const newLongURL = req.body.longURL;
+  const userID = req.session["user_id"];
+  const existingURLs = urlsForUser(userID);
+  if (checkDuplicateURLs(existingURLs, newLongURL)) {
+    return res.send('URL already exists');
+  }
   urlDatabase[newShortURL] = {
-    longURL: req.body.longURL,
-    userID: req.cookies["user_id"]
+    longURL: newLongURL,
+    userID
   };
   res.redirect(`/urls/${newShortURL}`);
 });
 
 // route for seeing a particular url
 app.get('/urls/:shortURL', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   const shortURL = req.params.shortURL;
   if (!userID) {
     return res.status(401).send('Please log in first');
@@ -129,6 +150,9 @@ app.get('/urls/:shortURL', (req, res) => {
 
 // route for redirecting to the long url (all authorized)
 app.get('/u/:shortURL', (req, res) => {
+  if (!urlDatabase[req.params.shortURL]) {
+    return res.status(403).send('URL does not exist');
+  }
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
@@ -136,7 +160,7 @@ app.get('/u/:shortURL', (req, res) => {
 // handle delete urls and can use cookies in curl to test
 // source: https://stackoverflow.com/questions/15995919/how-to-use-curl-to-send-cookies/15996114#15996114
 app.post('/urls/:shortURL/delete', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   const shortURL = req.params.shortURL;
   if (!userID) {
     return res.status(401).send('Delete not authorized');
@@ -151,7 +175,7 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 
 // handle update urls
 app.post('/urls/:id', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   const shortURL = req.params.id;
   if (!userID) {
     return res.status(401).send('Edit not authorized');
@@ -159,7 +183,11 @@ app.post('/urls/:id', (req, res) => {
   if (!urlDatabase[shortURL] || urlDatabase[shortURL].userID !== userID) {
     return res.status(401).send('URL does not exist');
   } else {
+    const existingURLs = urlsForUser(userID);
     const updatedLongURL = req.body.longURL;
+    if (checkDuplicateURLs(existingURLs, updatedLongURL)) {
+      return res.send('URL already exists');
+    }
     urlDatabase[shortURL] = {
       longURL: updatedLongURL,
       userID: userID
@@ -170,7 +198,7 @@ app.post('/urls/:id', (req, res) => {
 
 // show user login
 app.get('/login', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   const templateVars = {
     user: users[userID]
   };
@@ -190,20 +218,20 @@ app.post('/login', (req, res) => {
   if (!bcrypt.compareSync(password, user.password)) {
     return res.status(403).send('Password is incorrect');
   } else {
-    res.cookie('user_id', user.id);
+    req.session['user_id'] = user.id;
     res.redirect('/urls');
   }
 });
 
 // handle user logout
 app.post('/logout', (req, res) => {
-  res.clearCookie('user_id');
+  req.session['user_id'] = null;
   res.redirect('/urls');
 });
 
 // get register page
 app.get('/register', (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session["user_id"];
   const templateVars = {
     user: users[userID]
   };
@@ -233,7 +261,7 @@ app.post('/register', (req, res) => {
   };
   addUser(userInfo);
 
-  res.cookie('user_id', id);
+  req.session['user_id'] = id;
   res.redirect('/urls');
 });
 
