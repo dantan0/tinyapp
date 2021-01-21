@@ -17,13 +17,13 @@ const urlDatabase = {
 // storing user id and obj pairs
 const users = {
   "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
+    id: "userRandomID",
+    email: "user@example.com",
     password: "purple-monkey-dinosaur"
   },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
     password: "dishwasher-funk"
   }
 };
@@ -33,8 +33,8 @@ const users = {
 const generateRandomString = function() {
   let result = '';
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 6; i++ ) {
-     result += characters.charAt(Math.floor(Math.random() * characters.length));
+  for (let i = 0; i < 6; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
 };
@@ -48,9 +48,9 @@ const addUser = function(userInfo) {
 
 // checking if email already exists
 const getUserByEmail = function(email) {
-  for(let userID in users) {
+  for (let userID in users) {
     if (users[userID].email === email) {
-      return users[userID]
+      return users[userID];
     }
   }
 };
@@ -60,7 +60,7 @@ const urlsForUser = function(userID) {
   const filteredURLs = {}; // a key value pair of short and long urls
   for (let shortURL in urlDatabase) {
     if (urlDatabase[shortURL].userID === userID) {
-      filteredURLs[shortURL] = urlDatabase[shortURL].longURL
+      filteredURLs[shortURL] = urlDatabase[shortURL].longURL;
     }
   }
   return filteredURLs;
@@ -116,9 +116,9 @@ app.get('/urls/:shortURL', (req, res) => {
   }
   if (!urlDatabase[shortURL] || urlDatabase[shortURL].userID !== userID) {
     return res.status(401).send('URL does not exist');
-  };
+  }
   const templateVars = {
-    shortURL, 
+    shortURL,
     longURL: urlDatabase[shortURL].longURL,
     user: users[userID]
   };
@@ -170,7 +170,7 @@ app.get('/login', (req, res) => {
   const userID = req.cookies["user_id"];
   const templateVars = {
     user: users[userID]
-  }
+  };
   res.render('user_login', templateVars);
 });
 
@@ -217,7 +217,7 @@ app.post('/register', (req, res) => {
     return res.status(400).send('Either email or password missing!');
   }
 
-  if (getUserByEmail(email)){
+  if (getUserByEmail(email)) {
     return res.status(400).send('Email has already been used');
   }
 
