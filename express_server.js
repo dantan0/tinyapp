@@ -3,6 +3,7 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
+const methodOverride = require('method-override');
 const app = express();
 const PORT = 8080;
 
@@ -17,6 +18,8 @@ app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2']
 }));
+// override with POST having ?_method=DELETE or ?_method=PUT
+app.use(methodOverride('_method'));
 
 // storing short and long url pairs
 const urlDatabase = {
@@ -116,7 +119,7 @@ app.get('/u/:shortURL', (req, res) => {
 
 // handle delete urls and can use cookies in curl to test
 // source: https://stackoverflow.com/questions/15995919/how-to-use-curl-to-send-cookies/15996114#15996114
-app.post('/urls/:shortURL/delete', (req, res) => {
+app.delete('/urls/:shortURL', (req, res) => {
   const userID = req.session["user_id"];
   const shortURL = req.params.shortURL;
   if (!userID) {
@@ -131,7 +134,7 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 });
 
 // handle update urls
-app.post('/urls/:shortURL', (req, res) => {
+app.put('/urls/:shortURL', (req, res) => {
   const userID = req.session["user_id"];
   const shortURL = req.params.shortURL;
   if (!userID) {
